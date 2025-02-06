@@ -79,10 +79,10 @@ function initializePlayer(client) {
                 thumbnailImage: track.info.thumbnail || 'https://example.com/default_thumbnail.png',
                 backgroundColor: '#070707',
                 progress: 10,
-                progressColor: '#FF7A00',
-                progressBarColor: '#5F2D00',
+                progressColor: '#9900FF',
+                progressBarColor: '#410e63',
                 name: track.info.title,
-                nameColor: '#FF7A00',
+                nameColor: '#9900FF',
                 author: track.info.author || 'Unknown Artist',
                 authorColor: '#696969',
             });
@@ -95,20 +95,20 @@ function initializePlayer(client) {
             const attachment = new AttachmentBuilder(cardPath, { name: 'musicard.png' });
             const embed = new EmbedBuilder()
             .setAuthor({ 
-                name: 'Playing Song..', 
+                name: 'Tocando Música', 
                 iconURL: musicIcons.playerIcon,
                 url: config.SupportServer
             })
-            .setFooter({ text: `Developed by SSRR | Prime Music v1.2`, iconURL: musicIcons.heartIcon })
+            .setFooter({ text: `Developed by SSRR | Next Music v1.2`, iconURL: musicIcons.heartIcon })
             .setTimestamp()
             .setDescription(  
-                `- **Title:** [${track.info.title}](${track.info.uri})\n` +
-                `- **Author:** ${track.info.author || 'Unknown Artist'}\n` +
-                `- **Length:** ${formatDuration(track.info.length)}\n` +
-                `- **Requester:** ${requester}\n` +
-                `- **Source:** ${track.info.sourceName}\n` + '**- Controls :**\n 🔁 `Loop`, ❌ `Disable`, ⏭️ `Skip`, 📜 `Queue`, 🗑️ `Clear`\n ⏹️ `Stop`, ⏸️ `Pause`, ▶️ `Resume`, 🔊 `Vol +`, 🔉 `Vol -`')
+                `- **Título:** [${track.info.title}](${track.info.uri})\n` +
+                `- **Artista:** ${track.info.author || 'Unknown Artist'}\n` +
+                `- **Duração:** ${formatDuration(track.info.length)}\n` +
+                `- **Quem pediu:** ${requester}\n` +
+                `- **Fonte:** ${track.info.sourceName}\n` + '**- Controls :**\n 🔁 `Loop`, ❌ `Disable`, ⏭️ `Skip`, 📜 `Queue`, 🗑️ `Clear`\n ⏹️ `Stop`, ⏸️ `Pause`, ▶️ `Resume`, 🔊 `Vol +`, 🔉 `Vol -`')
             .setImage('attachment://musicard.png')
-            .setColor('#FF7A00');
+            .setColor('#9900FF');
 
           
             const actionRow1 = createActionRow1(false);
@@ -126,7 +126,7 @@ function initializePlayer(client) {
             console.error("Error creating or sending music card:", error.message);
             const errorEmbed = new EmbedBuilder()
                 .setColor('#FF0000')
-                .setDescription("⚠️ **Unable to load track card. Continuing playback...**");
+                .setDescription("⚠️ **\Não foi possível carregar o card, continuando...**");
             await channel.send({ embeds: [errorEmbed] });
         }
     });
@@ -156,17 +156,17 @@ function initializePlayer(client) {
     
                 if (!nextTrack) {
                     player.destroy();
-                    await channel.send("⚠️ **No more tracks to autoplay. Disconnecting...**");
+                    await channel.send("⚠️ **Sem mais faixas, desconectando...**");
                 }
             } else {
                 console.log(`Autoplay is disabled for guild: ${guildId}`);
                 player.destroy();
-                await channel.send("🎶 **Queue has ended. Autoplay is disabled.**");
+                await channel.send("🎶 **A fila acabou, o Autoplay está desativado.**");
             }
         } catch (error) {
             console.error("Error handling autoplay:", error);
             player.destroy();
-            await channel.send("⚠️ **An error occurred. Disconnecting...**");
+            await channel.send("⚠️ **Ocorreu um erro, desconectando...**");
         }
     });
     
