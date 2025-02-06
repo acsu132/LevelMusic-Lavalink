@@ -7,8 +7,8 @@ module.exports = {
   mongodbUri : "mongodb+srv://nextai:nextbotpass@cluster0.iuzzl.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0",
   setupFilePath: './commands/setup.json',
   commandsDir: './commands',  
-  embedColor: "#1db954",
-  activityName: "YouTube Music", 
+  embedColor: "#9900ff",
+  activityName: "Next Player", 
   activityType: "LISTENING",  // Available activity types : LISTENING , PLAYING
   SupportServer: "https://discord.gg/xQF9f9yUEM",
   embedTimeout: 5, 
