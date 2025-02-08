@@ -132,10 +132,34 @@ function initializePlayer(client) {
     });
 
     
-    client.riffy.on("trackEnd", async (player) => {
-        await disableTrackMessage(client, player);
-        currentTrackMessageId = null;
-    });
+client.riffy.on("trackEnd", async (player) => {
+    const channel = client.channels.cache.get(player.textChannel);
+    const guildId = player.guildId;
+
+    try {
+        const autoplaySetting = await autoplayCollection.findOne({ guildId });
+        if (autoplaySetting?.autoplay) {
+            const nextTrack = await player.autoplay(player);
+            if (!nextTrack) {
+                player.destroy();
+                await channel.send("⚠️ **Sem mais faixas, desconectando...**");
+            } else {
+                // Pre-load the next track and set it to play 1ms before the current track ends
+                setTimeout(() => {
+                    player.play(nextTrack);
+                }, Math.max(player.currentTrack.info.length - 1, 0)); // Adjust the timing as needed
+            }
+        } else {
+            console.log(`Autoplay is disabled for guild: ${guildId}`);
+            player.destroy();
+            await channel.send("🎶 **A fila acabou, o Autoplay está desativado.**");
+        }
+    } catch (error) {
+        console.error("Error handling autoplay:", error);
+        player.destroy();
+        await channel.send("⚠️ **Ocorreu um erro, desconectando...**");
+    }
+});
 
     client.riffy.on("playerDisconnect", async (player) => {
         await disableTrackMessage(client, player);
