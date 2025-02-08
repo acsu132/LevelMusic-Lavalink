@@ -69,24 +69,75 @@ function initializePlayer(client) {
         console.log(`${colors.cyan}[ LAVALINK ]${colors.reset} ${colors.red}Node ${node.name} Error ❌ | ${error.message}${colors.reset}`);
     });
 
-    client.riffy.on("trackStart", async (player, track) => {
-        const channel = client.channels.cache.get(player.textChannel);
-        const trackUri = track.info.uri;
-        const requester = requesters.get(trackUri);
+ client.riffy.on("trackStart", async (player, track) => {
+    const channel = client.channels.cache.get(player.textChannel);
+    const trackUri = track.info.uri;
+    const requester = requesters.get(trackUri);
 
-        try {
-            const musicard = await Dynamic({
-                thumbnailImage: track.info.thumbnail || 'https://example.com/default_thumbnail.png',
-                backgroundColor: null,
-                progress: 10,
-                progressColor: '#9900FF',
-                progressBarColor: '#410e63',
-                name: track.info.title,
-                nameColor: '#9900FF',
-                author: track.info.author || 'Unknown Artist',
-                authorColor: '#696969',
-            });
+    try {
+        const musicard = await Dynamic({
+            thumbnailImage: track.info.thumbnail || 'https://example.com/default_thumbnail.png',
+            backgroundColor: null,
+            progress: 10,
+            progressColor: '#9900FF',
+            progressBarColor: '#410e63',
+            name: track.info.title,
+            nameColor: '#9900FF',
+            author: track.info.author || 'Unknown Artist',
+            authorColor: '#696969',
+        });
 
+        const cardPath = path.join(__dirname, 'musicard.png');
+        fs.writeFileSync(cardPath, musicard);
+
+        const attachment = new AttachmentBuilder(cardPath, { name: 'musicard.png' });
+        const embed = new EmbedBuilder()
+            .setAuthor({
+                name: 'Tocando Música',
+                iconURL: musicIcons.playerIcon,
+                url: config.SupportServer
+            })
+            .setFooter({ text: `Developed by SSRR | Next Music v1.2`, iconURL: musicIcons.heartIcon })
+            .setTimestamp()
+            .setDescription(
+                `- **Título:** [${track.info.title}](${track.info.uri})\n` +
+                `- **Artista:** ${track.info.author || 'Unknown Artist'}\n` +
+                `- **Duração:** ${formatDuration(track.info.length)}\n` +
+                `- **Quem pediu:** ${requester}\n` +
+                `- **Fonte:** ${track.info.sourceName}\n` + '**- Controls :**\n 🔁 `Loop`, ❌ `Disable`, ⏭️ `Skip`, 📜 `Queue`, 🗑️ `Clear`\n ⏹️ `Stop`, ⏸️ `Pause`, ▶️ `Resume`'
+            )
+            .setImage('attachment://musicard.png')
+            .setColor('#9900FF');
+
+        const actionRow1 = createActionRow1(false);
+        const actionRow2 = createActionRow2(false);
+
+        const message = await sendMessageWithPermissionsCheck(channel, embed, attachment, actionRow1, actionRow2);
+        if (message) {
+            currentTrackMessageId = message.id;
+
+            if (collector) collector.stop();
+            collector = setupCollector(client, player, channel, message);
+        }
+
+        // Pré-carregar a próxima música
+        preloadNextTrack(player);
+
+    } catch (error) {
+        console.error("Error creating or sending music card:", error.message);
+        const errorEmbed = new EmbedBuilder()
+            .setColor('#FF0000')
+            .setDescription("⚠️ **\Não foi possível carregar o card, continuando...**");
+        await channel.send({ embeds: [errorEmbed] });
+    }
+});
+
+async function preloadNextTrack(player) {
+    const nextTrack = await player.queue.next();
+    if (nextTrack) {
+        player.play(nextTrack, { startTime: player.position + nextTrack.info.length - 1 });
+    }
+}
             // Save the generated card to a file
             const cardPath = path.join(__dirname, 'musicard.png');
             fs.writeFileSync(cardPath, musicard);
