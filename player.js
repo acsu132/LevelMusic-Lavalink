@@ -69,7 +69,7 @@ function initializePlayer(client) {
         console.log(`${colors.cyan}[ LAVALINK ]${colors.reset} ${colors.red}Node ${node.name} Error ❌ | ${error.message}${colors.reset}`);
     });
 
- client.riffy.on("trackStart", async (player, track) => {
+client.riffy.on("trackStart", async (player, track) => {
     const channel = client.channels.cache.get(player.textChannel);
     const trackUri = track.info.uri;
     const requester = requesters.get(trackUri);
@@ -135,7 +135,10 @@ function initializePlayer(client) {
 async function preloadNextTrack(player) {
     const nextTrack = await player.queue.next();
     if (nextTrack) {
-        player.play(nextTrack, { startTime: player.position + nextTrack.info.length - 1 });
+        // Tocar a próxima música 1ms antes da atual terminar
+        setTimeout(() => {
+            player.play(nextTrack);
+        }, player.position + nextTrack.info.length - 1);
     }
 }
             // Save the generated card to a file
