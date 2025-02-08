@@ -35,7 +35,7 @@ async function sendMessageWithPermissionsCheck(channel, embed, attachment, actio
     }
 }
 
-async function initializePlayer(client) {
+function initializePlayer(client) {
     const nodes = config.nodes.map(node => ({
         name: node.name,
         host: node.host,
@@ -87,28 +87,30 @@ async function initializePlayer(client) {
                 authorColor: '#696969',
             });
 
+            // Save the generated card to a file
             const cardPath = path.join(__dirname, 'musicard.png');
             fs.writeFileSync(cardPath, musicard);
 
+            // Prepare the attachment and embed
             const attachment = new AttachmentBuilder(cardPath, { name: 'musicard.png' });
             const embed = new EmbedBuilder()
-                .setAuthor({
-                    name: 'Tocando Música',
-                    iconURL: musicIcons.playerIcon,
-                    url: config.SupportServer
-                })
-                .setFooter({ text: `Developed by SSRR | Next Music v1.2`, iconURL: musicIcons.heartIcon })
-                .setTimestamp()
-                .setDescription(
-                    `- **Título:** [${track.info.title}](${track.info.uri})\n` +
-                    `- **Artista:** ${track.info.author || 'Unknown Artist'}\n` +
-                    `- **Duração:** ${formatDuration(track.info.length)}\n` +
-                    `- **Quem pediu:** ${requester}\n` +
-                    `- **Fonte:** ${track.info.sourceName}\n` + '**- Controls :**\n 🔁 `Loop`, ❌ `Disable`, ⏭️ `Skip`, 📜 `Queue`, 🗑️ `Clear`\n ⏹️ `Stop`, ⏸️ `Pause`, ▶️ `Resume`'
-                )
-                .setImage('attachment://musicard.png')
-                .setColor('#9900FF');
+            .setAuthor({ 
+                name: 'Tocando Música', 
+                iconURL: musicIcons.playerIcon,
+                url: config.SupportServer
+            })
+            .setFooter({ text: `Developed by SSRR | Next Music v1.2`, iconURL: musicIcons.heartIcon })
+            .setTimestamp()
+            .setDescription(  
+                `- **Título:** [${track.info.title}](${track.info.uri})\n` +
+                `- **Artista:** ${track.info.author || 'Unknown Artist'}\n` +
+                `- **Duração:** ${formatDuration(track.info.length)}\n` +
+                `- **Quem pediu:** ${requester}\n` +
+                `- **Fonte:** ${track.info.sourceName}\n` + '**- Controls :**\n 🔁 `Loop`, ❌ `Disable`, ⏭️ `Skip`, 📜 `Queue`, 🗑️ `Clear`\n ⏹️ `Stop`, ⏸️ `Pause`, ▶️ `Resume`, 🔊 `Vol +`, 🔉 `Vol -`')
+            .setImage('attachment://musicard.png')
+            .setColor('#9900FF');
 
+          
             const actionRow1 = createActionRow1(false);
             const actionRow2 = createActionRow2(false);
 
@@ -116,12 +118,9 @@ async function initializePlayer(client) {
             if (message) {
                 currentTrackMessageId = message.id;
 
-                if (collector) collector.stop();
+                if (collector) collector.stop(); 
                 collector = setupCollector(client, player, channel, message);
             }
-
-            // Pré-carregar a próxima música
-            preloadNextTrack(player, track.info.length);
 
         } catch (error) {
             console.error("Error creating or sending music card:", error.message);
@@ -132,50 +131,44 @@ async function initializePlayer(client) {
         }
     });
 
-client.riffy.on("queueEnd", async (player) => {
-    const channel = client.channels.cache.get(player.textChannel);
-    const guildId = player.guildId;
+    
+    client.riffy.on("trackEnd", async (player) => {
+        await disableTrackMessage(client, player);
+        currentTrackMessageId = null;
+    });
 
-    try {
-        const autoplaySetting = await autoplayCollection.findOne({ guildId });
+    client.riffy.on("playerDisconnect", async (player) => {
+        await disableTrackMessage(client, player);
+        currentTrackMessageId = null;
+    });
 
-        if (autoplaySetting?.autoplay) {
-            const nextTrack = await player.autoplay(player);
-
-            if (!nextTrack) {
-                player.destroy();
-                await channel.send("⚠️ **Sem mais faixas, desconectando...**");
+    client.riffy.on("queueEnd", async (player) => {
+        const channel = client.channels.cache.get(player.textChannel);
+        const guildId = player.guildId;
+    
+        try {
+         
+            const autoplaySetting = await autoplayCollection.findOne({ guildId });
+    
+            if (autoplaySetting?.autoplay) {
+                //console.log(`Autoplay is enabled for guild: ${guildId}`);
+                const nextTrack = await player.autoplay(player);
+    
+                if (!nextTrack) {
+                    player.destroy();
+                    await channel.send("⚠️ **Sem mais faixas, desconectando...**");
+                }
             } else {
-                player.queue.add(nextTrack);
-                await preloadNextTrack(player, nextTrack.info.length);
+                console.log(`Autoplay is disabled for guild: ${guildId}`);
+                player.destroy();
+                await channel.send("🎶 **A fila acabou, o Autoplay está desativado.**");
             }
-        } else {
-            console.log(`Autoplay is disabled for guild: ${guildId}`);
+        } catch (error) {
+            console.error("Error handling autoplay:", error);
             player.destroy();
-            await channel.send("🎶 **A fila acabou, o Autoplay está desativado.**");
+            await channel.send("⚠️ **Ocorreu um erro, desconectando...**");
         }
-    } catch (error) {
-        console.error("Error handling autoplay:", error);
-        player.destroy();
-        await channel.send("⚠️ **Ocorreu um erro, desconectando...**");
-    }
-});
-
-async function preloadNextTrack(player, currentTrackLength) {
-    const nextTrack = player.queue?.[0]; // Acessa a próxima faixa na fila
-    if (nextTrack) {
-        // Calcular o tempo restante para a faixa atual terminar
-        const remainingTime = currentTrackLength - player.position;
-        // Verificar e iniciar a conexão do player se não estiver conectada
-        if (!player.connected) {
-            await player.createConnection();
-        }
-        // Tocar a próxima música 1ms antes da atual terminar
-        setTimeout(() => {
-            player.play(nextTrack);
-        }, remainingTime - 1);
-    }
-}
+    });
     
     async function disableTrackMessage(client, player) {
         const channel = client.channels.cache.get(player.textChannel);
@@ -193,19 +186,6 @@ async function preloadNextTrack(player, currentTrackLength) {
         }
     }
 }
-
-async function preloadNextTrack(player, currentTrackLength) {
-    const nextTrack = await player.queue.next();
-    if (nextTrack) {
-        // Calcular o tempo restante para a faixa atual terminar
-        const remainingTime = currentTrackLength - player.position;
-        // Tocar a próxima música 1ms antes da atual terminar
-        setTimeout(() => {
-            player.play(nextTrack);
-        }, remainingTime - 1);
-    }
-}
-
 function formatDuration(ms) {
     const seconds = Math.floor((ms / 1000) % 60);
     const minutes = Math.floor((ms / (1000 * 60)) % 60);
@@ -219,7 +199,6 @@ function formatDuration(ms) {
         .filter(Boolean)
         .join(' ');
 }
-
 function setupCollector(client, player, channel, message) {
     const filter = i => [
         'loopToggle', 'skipTrack', 'disableLoop', 'showQueue', 'clearQueue',
@@ -348,6 +327,7 @@ function showQueue(channel) {
     }
     const queueChunks = [];
 
+ 
     for (let i = 1; i < queueNames.length; i += 10) {
         const chunk = queueNames.slice(i, i + 10)
             .map((song, index) => `${i + index}. ${formatTrack(song)}`)
@@ -355,10 +335,12 @@ function showQueue(channel) {
         queueChunks.push(chunk);
     }
 
+  
     channel.send({
         embeds: [new EmbedBuilder().setColor(config.embedColor).setDescription(nowPlaying)]
     }).catch(console.error);
 
+  
     queueChunks.forEach(async (chunk) => {
         const embed = new EmbedBuilder()
             .setColor(config.embedColor)
