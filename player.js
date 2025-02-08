@@ -132,15 +132,18 @@ async function initializePlayer(client) {
         }
     });
 
-    client.riffy.on("trackEnd", async (player) => {
-        await disableTrackMessage(client, player);
-        currentTrackMessageId = null;
-    });
-
-    client.riffy.on("playerDisconnect", async (player) => {
-        await disableTrackMessage(client, player);
-        currentTrackMessageId = null;
-    });
+// Substitua a função existente da linha 135 até a 142
+async function preloadNextTrack(player, currentTrackLength) {
+    const nextTrack = player.queue?.[0]; // Acessa a próxima faixa na fila
+    if (nextTrack) {
+        // Calcular o tempo restante para a faixa atual terminar
+        const remainingTime = currentTrackLength - player.position;
+        // Tocar a próxima música 1ms antes da atual terminar
+        setTimeout(() => {
+            player.play(nextTrack);
+        }, remainingTime - 1);
+    }
+}
 
     client.riffy.on("queueEnd", async (player) => {
         const channel = client.channels.cache.get(player.textChannel);
