@@ -121,7 +121,7 @@ client.riffy.on("trackStart", async (player, track) => {
         }
 
         // Pré-carregar a próxima música
-        preloadNextTrack(player);
+        preloadNextTrack(player, track.info.length);
 
     } catch (error) {
         console.error("Error creating or sending music card:", error.message);
@@ -132,13 +132,15 @@ client.riffy.on("trackStart", async (player, track) => {
     }
 });
 
-async function preloadNextTrack(player) {
+async function preloadNextTrack(player, currentTrackLength) {
     const nextTrack = await player.queue.next();
     if (nextTrack) {
+        // Calcular o tempo restante para a faixa atual terminar
+        const remainingTime = currentTrackLength - player.position;
         // Tocar a próxima música 1ms antes da atual terminar
         setTimeout(() => {
             player.play(nextTrack);
-        }, player.position + nextTrack.info.length - 1);
+        }, remainingTime - 1);
     }
 }
             // Save the generated card to a file
