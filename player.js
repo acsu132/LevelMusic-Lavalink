@@ -35,7 +35,7 @@ async function sendMessageWithPermissionsCheck(channel, embed, attachment, actio
     }
 }
 
-function initializePlayer(client) {
+async function initializePlayer(client) {
     const nodes = config.nodes.map(node => ({
         name: node.name,
         host: node.host,
@@ -69,104 +69,46 @@ function initializePlayer(client) {
         console.log(`${colors.cyan}[ LAVALINK ]${colors.reset} ${colors.red}Node ${node.name} Error ❌ | ${error.message}${colors.reset}`);
     });
 
-client.riffy.on("trackStart", async (player, track) => {
-    const channel = client.channels.cache.get(player.textChannel);
-    const trackUri = track.info.uri;
-    const requester = requesters.get(trackUri);
+    client.riffy.on("trackStart", async (player, track) => {
+        const channel = client.channels.cache.get(player.textChannel);
+        const trackUri = track.info.uri;
+        const requester = requesters.get(trackUri);
 
-    try {
-        const musicard = await Dynamic({
-            thumbnailImage: track.info.thumbnail || 'https://example.com/default_thumbnail.png',
-            backgroundColor: null,
-            progress: 10,
-            progressColor: '#9900FF',
-            progressBarColor: '#410e63',
-            name: track.info.title,
-            nameColor: '#9900FF',
-            author: track.info.author || 'Unknown Artist',
-            authorColor: '#696969',
-        });
+        try {
+            const musicard = await Dynamic({
+                thumbnailImage: track.info.thumbnail || 'https://example.com/default_thumbnail.png',
+                backgroundColor: null,
+                progress: 10,
+                progressColor: '#9900FF',
+                progressBarColor: '#410e63',
+                name: track.info.title,
+                nameColor: '#9900FF',
+                author: track.info.author || 'Unknown Artist',
+                authorColor: '#696969',
+            });
 
-        const cardPath = path.join(__dirname, 'musicard.png');
-        fs.writeFileSync(cardPath, musicard);
-
-        const attachment = new AttachmentBuilder(cardPath, { name: 'musicard.png' });
-        const embed = new EmbedBuilder()
-            .setAuthor({
-                name: 'Tocando Música',
-                iconURL: musicIcons.playerIcon,
-                url: config.SupportServer
-            })
-            .setFooter({ text: `Developed by SSRR | Next Music v1.2`, iconURL: musicIcons.heartIcon })
-            .setTimestamp()
-            .setDescription(
-                `- **Título:** [${track.info.title}](${track.info.uri})\n` +
-                `- **Artista:** ${track.info.author || 'Unknown Artist'}\n` +
-                `- **Duração:** ${formatDuration(track.info.length)}\n` +
-                `- **Quem pediu:** ${requester}\n` +
-                `- **Fonte:** ${track.info.sourceName}\n` + '**- Controls :**\n 🔁 `Loop`, ❌ `Disable`, ⏭️ `Skip`, 📜 `Queue`, 🗑️ `Clear`\n ⏹️ `Stop`, ⏸️ `Pause`, ▶️ `Resume`'
-            )
-            .setImage('attachment://musicard.png')
-            .setColor('#9900FF');
-
-        const actionRow1 = createActionRow1(false);
-        const actionRow2 = createActionRow2(false);
-
-        const message = await sendMessageWithPermissionsCheck(channel, embed, attachment, actionRow1, actionRow2);
-        if (message) {
-            currentTrackMessageId = message.id;
-
-            if (collector) collector.stop();
-            collector = setupCollector(client, player, channel, message);
-        }
-
-        // Pré-carregar a próxima música
-        preloadNextTrack(player, track.info.length);
-
-    } catch (error) {
-        console.error("Error creating or sending music card:", error.message);
-        const errorEmbed = new EmbedBuilder()
-            .setColor('#FF0000')
-            .setDescription("⚠️ **\Não foi possível carregar o card, continuando...**");
-        await channel.send({ embeds: [errorEmbed] });
-    }
-});
-
-async function preloadNextTrack(player, currentTrackLength) {
-    const nextTrack = await player.queue.next();
-    if (nextTrack) {
-        // Calcular o tempo restante para a faixa atual terminar
-        const remainingTime = currentTrackLength - player.position;
-        // Tocar a próxima música 1ms antes da atual terminar
-        setTimeout(() => {
-            player.play(nextTrack);
-        }, remainingTime - 1);
-    }
-}
-            // Save the generated card to a file
             const cardPath = path.join(__dirname, 'musicard.png');
             fs.writeFileSync(cardPath, musicard);
 
-            // Prepare the attachment and embed
             const attachment = new AttachmentBuilder(cardPath, { name: 'musicard.png' });
             const embed = new EmbedBuilder()
-            .setAuthor({ 
-                name: 'Tocando Música', 
-                iconURL: musicIcons.playerIcon,
-                url: config.SupportServer
-            })
-            .setFooter({ text: `Developed by SSRR | Next Music v1.2`, iconURL: musicIcons.heartIcon })
-            .setTimestamp()
-            .setDescription(  
-                `- **Título:** [${track.info.title}](${track.info.uri})\n` +
-                `- **Artista:** ${track.info.author || 'Unknown Artist'}\n` +
-                `- **Duração:** ${formatDuration(track.info.length)}\n` +
-                `- **Quem pediu:** ${requester}\n` +
-                `- **Fonte:** ${track.info.sourceName}\n` + '**- Controls :**\n 🔁 `Loop`, ❌ `Disable`, ⏭️ `Skip`, 📜 `Queue`, 🗑️ `Clear`\n ⏹️ `Stop`, ⏸️ `Pause`, ▶️ `Resume`, 🔊 `Vol +`, 🔉 `Vol -`')
-            .setImage('attachment://musicard.png')
-            .setColor('#9900FF');
+                .setAuthor({
+                    name: 'Tocando Música',
+                    iconURL: musicIcons.playerIcon,
+                    url: config.SupportServer
+                })
+                .setFooter({ text: `Developed by SSRR | Next Music v1.2`, iconURL: musicIcons.heartIcon })
+                .setTimestamp()
+                .setDescription(
+                    `- **Título:** [${track.info.title}](${track.info.uri})\n` +
+                    `- **Artista:** ${track.info.author || 'Unknown Artist'}\n` +
+                    `- **Duração:** ${formatDuration(track.info.length)}\n` +
+                    `- **Quem pediu:** ${requester}\n` +
+                    `- **Fonte:** ${track.info.sourceName}\n` + '**- Controls :**\n 🔁 `Loop`, ❌ `Disable`, ⏭️ `Skip`, 📜 `Queue`, 🗑️ `Clear`\n ⏹️ `Stop`, ⏸️ `Pause`, ▶️ `Resume`'
+                )
+                .setImage('attachment://musicard.png')
+                .setColor('#9900FF');
 
-          
             const actionRow1 = createActionRow1(false);
             const actionRow2 = createActionRow2(false);
 
@@ -174,9 +116,12 @@ async function preloadNextTrack(player, currentTrackLength) {
             if (message) {
                 currentTrackMessageId = message.id;
 
-                if (collector) collector.stop(); 
+                if (collector) collector.stop();
                 collector = setupCollector(client, player, channel, message);
             }
+
+            // Pré-carregar a próxima música
+            preloadNextTrack(player, track.info.length);
 
         } catch (error) {
             console.error("Error creating or sending music card:", error.message);
@@ -187,7 +132,6 @@ async function preloadNextTrack(player, currentTrackLength) {
         }
     });
 
-    
     client.riffy.on("trackEnd", async (player) => {
         await disableTrackMessage(client, player);
         currentTrackMessageId = null;
@@ -203,11 +147,9 @@ async function preloadNextTrack(player, currentTrackLength) {
         const guildId = player.guildId;
     
         try {
-         
             const autoplaySetting = await autoplayCollection.findOne({ guildId });
     
             if (autoplaySetting?.autoplay) {
-                //console.log(`Autoplay is enabled for guild: ${guildId}`);
                 const nextTrack = await player.autoplay(player);
     
                 if (!nextTrack) {
@@ -242,6 +184,19 @@ async function preloadNextTrack(player, currentTrackLength) {
         }
     }
 }
+
+async function preloadNextTrack(player, currentTrackLength) {
+    const nextTrack = await player.queue.next();
+    if (nextTrack) {
+        // Calcular o tempo restante para a faixa atual terminar
+        const remainingTime = currentTrackLength - player.position;
+        // Tocar a próxima música 1ms antes da atual terminar
+        setTimeout(() => {
+            player.play(nextTrack);
+        }, remainingTime - 1);
+    }
+}
+
 function formatDuration(ms) {
     const seconds = Math.floor((ms / 1000) % 60);
     const minutes = Math.floor((ms / (1000 * 60)) % 60);
@@ -255,6 +210,7 @@ function formatDuration(ms) {
         .filter(Boolean)
         .join(' ');
 }
+
 function setupCollector(client, player, channel, message) {
     const filter = i => [
         'loopToggle', 'skipTrack', 'disableLoop', 'showQueue', 'clearQueue',
@@ -383,7 +339,6 @@ function showQueue(channel) {
     }
     const queueChunks = [];
 
- 
     for (let i = 1; i < queueNames.length; i += 10) {
         const chunk = queueNames.slice(i, i + 10)
             .map((song, index) => `${i + index}. ${formatTrack(song)}`)
@@ -391,12 +346,10 @@ function showQueue(channel) {
         queueChunks.push(chunk);
     }
 
-  
     channel.send({
         embeds: [new EmbedBuilder().setColor(config.embedColor).setDescription(nowPlaying)]
     }).catch(console.error);
 
-  
     queueChunks.forEach(async (chunk) => {
         const embed = new EmbedBuilder()
             .setColor(config.embedColor)
