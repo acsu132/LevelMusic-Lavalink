@@ -132,6 +132,35 @@ async function initializePlayer(client) {
         }
     });
 
+client.riffy.on("queueEnd", async (player) => {
+    const channel = client.channels.cache.get(player.textChannel);
+    const guildId = player.guildId;
+
+    try {
+        const autoplaySetting = await autoplayCollection.findOne({ guildId });
+
+        if (autoplaySetting?.autoplay) {
+            const nextTrack = await player.autoplay(player);
+
+            if (!nextTrack) {
+                player.destroy();
+                await channel.send("⚠️ **Sem mais faixas, desconectando...**");
+            } else {
+                player.queue.add(nextTrack);
+                await preloadNextTrack(player, nextTrack.info.length);
+            }
+        } else {
+            console.log(`Autoplay is disabled for guild: ${guildId}`);
+            player.destroy();
+            await channel.send("🎶 **A fila acabou, o Autoplay está desativado.**");
+        }
+    } catch (error) {
+        console.error("Error handling autoplay:", error);
+        player.destroy();
+        await channel.send("⚠️ **Ocorreu um erro, desconectando...**");
+    }
+});
+
 async function preloadNextTrack(player, currentTrackLength) {
     const nextTrack = player.queue?.[0]; // Acessa a próxima faixa na fila
     if (nextTrack) {
@@ -147,32 +176,6 @@ async function preloadNextTrack(player, currentTrackLength) {
         }, remainingTime - 1);
     }
 }
-
-    client.riffy.on("queueEnd", async (player) => {
-        const channel = client.channels.cache.get(player.textChannel);
-        const guildId = player.guildId;
-    
-        try {
-            const autoplaySetting = await autoplayCollection.findOne({ guildId });
-    
-            if (autoplaySetting?.autoplay) {
-                const nextTrack = await player.autoplay(player);
-    
-                if (!nextTrack) {
-                    player.destroy();
-                    await channel.send("⚠️ **Sem mais faixas, desconectando...**");
-                }
-            } else {
-                console.log(`Autoplay is disabled for guild: ${guildId}`);
-                player.destroy();
-                await channel.send("🎶 **A fila acabou, o Autoplay está desativado.**");
-            }
-        } catch (error) {
-            console.error("Error handling autoplay:", error);
-            player.destroy();
-            await channel.send("⚠️ **Ocorreu um erro, desconectando...**");
-        }
-    });
     
     async function disableTrackMessage(client, player) {
         const channel = client.channels.cache.get(player.textChannel);
